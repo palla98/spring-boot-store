@@ -21,12 +21,16 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.util.List;
+
 @AllArgsConstructor
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final UserDetailsService  userDetailsService;
+    private final List<SecurityRules> featureSecurityRules;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -37,22 +41,10 @@ public class SecurityConfig {
             // 2. disabilitare la CSRF (cross site request forgery)
             .csrf(AbstractHttpConfigurer::disable)
             // 3. autorizzazione delle richieste
-            .authorizeHttpRequests(c -> c
-                .requestMatchers("/swagger-ui/**").permitAll()
-                .requestMatchers("/swagger-ui.html/**").permitAll()
-                .requestMatchers("/v3/api-docs/**").permitAll()
-                .requestMatchers("/carts/**").permitAll() // tutte permesse da /carts in poi
-                .requestMatchers("/admin/**").hasRole(Role.ADMIN.name())
-                .requestMatchers(HttpMethod.POST, "/users").permitAll() // autorizzo le post di /users
-                .requestMatchers(HttpMethod.GET, "/products/**").permitAll() //
-                .requestMatchers(HttpMethod.POST, "/products/**").hasRole(Role.ADMIN.name())
-                .requestMatchers(HttpMethod.DELETE, "/products/**").hasRole(Role.ADMIN.name())
-                .requestMatchers(HttpMethod.PUT, "/products/**").hasRole(Role.ADMIN.name())
-                .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
-                .requestMatchers(HttpMethod.POST, "/auth/refresh").permitAll()
-                .requestMatchers(HttpMethod.POST, "/checkout/webhook").permitAll()
-                //.requestMatchers(HttpMethod.POST, "/auth/validate").permitAll()  lo togliamo cosi vediamo se il filtro funziona
-                .anyRequest().authenticated() // tutto il resto è protetto (403 forbidden)
+            .authorizeHttpRequests(c -> {
+                        featureSecurityRules.forEach(r -> r.configure(c)); //applico tutte le rules di ogni component
+                        c.anyRequest().authenticated(); // protetto (403 forbidden)
+                    }
             )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class) // questo filtro mi viene chimato prima di tutti perchè è quello che si occupa dell autenticazione e validazione token
                 .exceptionHandling(c -> {
@@ -65,7 +57,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    private final UserDetailsService  userDetailsService;
 
     //ogni volta che avremo bisogno di un password encoder lui entra in azione
     @Bean
