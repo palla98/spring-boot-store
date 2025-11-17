@@ -1,5 +1,6 @@
 package com.codewithmosh.store.users;
 
+import com.codewithmosh.store.common.ErrorDto;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -79,8 +80,8 @@ public class UserController {
     }
 
     @ExceptionHandler(UserAlreadyExists.class)
-    public ResponseEntity<Void> handleUserAlreadyExistsException(){
-        return ResponseEntity.badRequest().build();
+    public ResponseEntity<ErrorDto> handleUserAlreadyExistsException(UserAlreadyExists ex){
+        return ResponseEntity.badRequest().body(new ErrorDto(ex.getMessage()));
     }
 
 
